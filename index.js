@@ -5,7 +5,7 @@
 		- smooth transitions     .........single-phase wave generation NO
 */
 
-var r = new require('stream').Readable(),
+var readableStream = new require('stream').Readable(),
 	Speaker = require('speaker'),
 	Frequency = require('./classes/Frequency.js'),
 	Voice = require('./classes/Voice.js'),
@@ -13,7 +13,6 @@ var r = new require('stream').Readable(),
 	loop_ticks = 0,
 	setImmediate_buffer_time = 2,
 	settings = {
-		freqs: [400, 500, 800, 900, 1200, 1600],
 		bitDepth: 16,
 		channels: 2,
 		sampleRate: 44100,
@@ -35,6 +34,8 @@ var r = new require('stream').Readable(),
 		one:0
 	},
 	generators = {
+		custom: {},
+		//[this] is bound to the this of the voice object currently being evaluated
 		sine_wave: function (){
 			var vibrado = 0;
 			if(!!this.vibrado_depth && !!this.vibrado_freq){
@@ -54,27 +55,34 @@ var r = new require('stream').Readable(),
 		rm_voice: rm_voice,
 		get_voice: get_voice,
 		generators: generators
-	};
+	},
+	baseVoice = new Voice(generators.sine_wave, {volume: 0, freq: 1}); //MUST HAVE 1 VOICE OR PRGRM CRSHZ
 
 module.exports = (function(){
 	settings.sampleSize = settings.bitDepth / 8;
 	settings.blockAlign = settings.sampleSize * settings.channels;
 	settings.amplitude = settings.bitDepth > 8 ? 32760 : 127;
-	r._read = function(){};
-	r.pipe(new Speaker());
-	
-	add_voice(generators.sine_wave, {volume: 0, freq: 1})//MUST HAVE 1 OR PRGRM CRSHZ
+	readableStream._read = function(){};
+	readableStream.pipe(new Speaker());
 
 	return wavegen;
 }());
 
 function add_voice(fn, opts){
+	if(typeof fn === 'object'){opts = fn;fn = null;}//if supply opts and not fn
+	if(!fn){fn = generators.sine_wave}//if no generator specified
+	if(!opts){opts = {}}
+
 	if(voices.length > (settings.max_voices - 1)){
 		voices[v] = null;
 		voices.shift();
 	}
+
+	if(!opts.id){opts.id = voices.length}
+
 	voices[voices.length] = new Voice(fn, opts);
 }
+
 function rm_voice(id){
 	for(var v in voices){
 		if(voices[v].id === id){
@@ -83,6 +91,7 @@ function rm_voice(id){
 		}
 	}
 }
+
 function get_voice(id){
 	if(typeof id === 'string'){id = parseInt(id)}
 	for(var v in voices){
@@ -93,7 +102,6 @@ function get_voice(id){
 	return false;
 }
 
-
 function update(delta){
 	time.sample_time = time.samplesGenerated / settings.sampleRate;
 	if(delta > time.tick){debug('tick lag: '+ (delta - time.tick));}
@@ -103,25 +111,24 @@ function update(delta){
 	this.samples = generate_amplitude_data.call(this, numSamples);
 }
 
-
 var wave_meta = {
 	last_point:0,
 	phases:0,
 	last_freq: 0,
 	last_freq_change:0
-}
-function generate_amplitude_data(numSamples){
+}function generate_amplitude_data(numSamples){
 	var buf = new Buffer(numSamples * settings.blockAlign);
 
 	//console.log(wave_meta.phases, 20 * wave_meta.phases)
 	wave_meta.phases = 0;
 
-	//kinda works of you update the freq here. pretty choppy though
-	for(var v in voices){
-		voices[v].frequency.update(time.samplesGenerated / settings.sampleRate);
+	var tempVoices = [baseVoice].concat(voices);
+
+	//kinda works if you update the freq here. pretty choppy though
+	for(var v in tempVoices){
+		tempVoices[v].frequency.update(time.samplesGenerated / settings.sampleRate);
 	}
-
-
+	
 	for (var i = 0; i < numSamples; i++) {
 		time.time = (time.samplesGenerated + i) / (settings.sampleRate);
 		time.one = time.time - Math.floor(time.time)
@@ -130,10 +137,10 @@ function generate_amplitude_data(numSamples){
 		var amp = (settings.volume * settings.amplitude),
 			voice_data = (function(){
 				data = 0;
-				for(var v in voices){data += voices[v].math_engine();}
+				for(var v in tempVoices){data += tempVoices[v].math_engine();}
 				return data;
 			}()),
-			point = Math.round((amp / voices.length) * voice_data );
+			point = Math.round((amp / (!voices.length ? 1 : voices.length)) * voice_data );
 		
 
 		/*if (wave_meta.last_point < 0 && point >= 0){
@@ -157,9 +164,10 @@ function generate_amplitude_data(numSamples){
 }
 
 function start_wavegen(){
-	update_loop(update.bind(r));
+	update_loop(update.bind(readableStream));
 	return this; //for method chaining
 }
+
 function debug(msg){
 	if(wavegen.debug){
 		if(Array.isArray(msg) && !!msg.join && msg.length > 1){
@@ -168,6 +176,7 @@ function debug(msg){
 		console.log(msg);
 	}
 }
+
 function update_loop(fn) {
 	var now = Date.now();
 

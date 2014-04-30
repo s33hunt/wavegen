@@ -12,8 +12,6 @@ function Frequency(settings){
 	this.progress = 0;
 	this.slide_start = 0;
 
-	//console.log(this.time_increment, settings);
-
 	var temp = ['lerp', 'slerp'];
 	for(var m in temp){
 		Object.defineProperty(this.interpolation_modes, temp[m], {
@@ -52,6 +50,7 @@ function Frequency(settings){
 
 	this.target_freq = this.freq;
 }
+
 Frequency.prototype.update = function(t){
 	if(this.target_freq !== this.freq && this.target_freq !== this.prev_freq) {
 		this.progress += t;
@@ -61,8 +60,8 @@ Frequency.prototype.update = function(t){
 		this.slide_start = t;
 	}
 	if(this.progress > .9)console.log(this.progress)
-
 }
+
 Frequency.prototype.slerp = function(a,b,t){
 	if(arguments.length < 3) return;
 	if(t > 1){
@@ -75,12 +74,10 @@ Frequency.prototype.slerp = function(a,b,t){
 		this.progress = 0;
 	}
 	var val = a + ( (b - a) * (.5*(1 - Math.cos(Math.PI * t ) ) ) );
-	if(t<1){
-		//console.log(a,b,t,val)
-	}
 	return val;
 	//return (((-.5*Math.cos(Math.PI*t))-.5)*(a-b))+a;
 }
+
 Frequency.prototype.lerp = function(a,b,t){
 	if(arguments.length < 3) return;
 	if(t > 1){
@@ -94,10 +91,3 @@ Frequency.prototype.lerp = function(a,b,t){
 	}
 	return a+((b-a) * t);
 }
-/*
-var f = new Frequency(.1);
-
-for(var i =0;i<10;i++){
-	f.target_freq = 10;console.log(f.freq);
-}
-*/
