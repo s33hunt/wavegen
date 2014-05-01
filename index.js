@@ -116,7 +116,8 @@ var wave_meta = {
 	phases:0,
 	last_freq: 0,
 	last_freq_change:0
-}function generate_amplitude_data(numSamples){
+}
+function generate_amplitude_data(numSamples){
 	var buf = new Buffer(numSamples * settings.blockAlign);
 
 	//console.log(wave_meta.phases, 20 * wave_meta.phases)
@@ -141,15 +142,6 @@ var wave_meta = {
 				return data;
 			}()),
 			point = Math.round((amp / (!voices.length ? 1 : voices.length)) * voice_data );
-		
-
-		/*if (wave_meta.last_point < 0 && point >= 0){
-			wave_meta.phases++;
-			console.log(frequency.freq)
-			frequency.update(time.time - wave_meta.last_freq_change);
-			time.samplesGenerated = 0;
-			wave_meta.last_freq_change = time.time;
-		}*/
 
 		wave_meta.last_point = point;
 
