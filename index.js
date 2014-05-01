@@ -12,6 +12,7 @@ var readableStream = new require('stream').Readable(),
 	fs = require('fs'),
 	loop_ticks = 0,
 	setImmediate_buffer_time = 2,
+	current_id = 0,
 	settings = {
 		bitDepth: 16,
 		channels: 2,
@@ -78,7 +79,7 @@ function add_voice(fn, opts){
 		voices.shift();
 	}
 
-	if(!opts.id){opts.id = voices.length}
+	if(!opts.id){opts.id = current_id++}
 
 	voices[voices.length] = new Voice(fn, opts);
 }

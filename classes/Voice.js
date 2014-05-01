@@ -18,6 +18,7 @@ function Voice (fn, opts){
 		sample_rate: 44100, 
 		freq: opts.freq || 440
 	});
+	
 	this.id = opts.id;
 	this.volume = opts.volume !== undefined ? opts.volume : 1;
 	this.vibrado_depth = opts.vibrado_depth !== undefined ? opts.vibrado_depth : 0;
